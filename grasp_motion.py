@@ -106,7 +106,8 @@ class MotionPlanner:
         self.floor = None
         for k in range(p.getNumBodies(physicsClientId=self.live_client)):
             live = p.getBodyUniqueId(k, physicsClientId=self.live_client)
-            if live in (self.env.robot_id, self.env.object_id):
+            if live in (self.env.robot_id, self.env.object_id,
+                        getattr(self.env, "goal_marker_id", None)):
                 continue
             names = p.getBodyInfo(live, physicsClientId=self.live_client)
             label = " ".join(n.decode().lower() for n in names)
@@ -116,7 +117,7 @@ class MotionPlanner:
             elif "table" in label:
                 b = self._load(Path(pybullet_data.getDataPath()) / "table/table.urdf", live)
             elif "maze" in label:
-                b = self._load(ROOT / "assets/maze.urdf", live,
+                b = self._load(getattr(self.env, "maze_urdf_path", ROOT / "assets/maze.urdf"), live,
                                flags=p.URDF_MERGE_FIXED_LINKS)
             elif not any(p.getCollisionShapeData(live, link, physicsClientId=self.live_client)
                          for link in range(-1, p.getNumJoints(live, physicsClientId=self.live_client))):
@@ -185,6 +186,22 @@ class MotionPlanner:
         return np.asarray(state[4]), np.asarray(p.getMatrixFromQuaternion(state[5])).reshape(3, 3)
 
     def _jacobian(self, joints=None):
+        """Analytic Jacobian at the TCP link origin, checked against FK differences.
+
+        Bullet's localPosition=[0,0,0] is the link frame origin for this URDF,
+        not the offset inertial origin. Keep the numerical version as an
+        independent regression reference.
+        """
+        active = self.arm if joints is None else list(joints)
+        zeros = [0.] * len(self.q)
+        linear, angular = p.calculateJacobian(self.robot, self.tcp, [0., 0., 0.],
+            self.q.tolist(), zeros, zeros, physicsClientId=self.client)
+        jp, jr = np.zeros_like(linear), np.zeros_like(angular)
+        jp[:, active] = np.asarray(linear)[:, active]
+        jr[:, active] = np.asarray(angular)[:, active]
+        return jp, jr
+
+    def _numerical_jacobian(self, joints=None):
         """Central FK differences avoid Bullet's localPosition frame ambiguity.
 
         A 0.2 mm/rad perturbation is large enough for getLinkState's float32
@@ -208,7 +225,8 @@ class MotionPlanner:
         return linear, angular
 
     def solve_pose(self, q0, position, rotation, joints=None, position_tolerance=0.003,
-                   orientation_tolerance=0.06, max_iters=150, restarts=2):
+                   orientation_tolerance=0.06, max_iters=150, restarts=2,
+                   collision_options=None):
         """Damped least-squares SE(3) IK, fixed base; None on non-convergence.
 
         Limits apply at every iterate. Multiple deterministic seeds address
@@ -225,9 +243,19 @@ class MotionPlanner:
             raise ValueError("rotation must be a proper orthonormal matrix")
         for attempt in range(restarts + 1):
             best_cost = np.inf
-            q = q0.copy()
+            q = np.clip(q0.copy(), self.lower, self.upper)
             if attempt:
-                q[active] += self.rng.normal(0, .3, len(active))
+                if attempt <= 2:
+                    # Nearby noise cannot cross from an elbow-down solution
+                    # through its singularity to the elbow-up branch. Seed both
+                    # branches explicitly before trying wider random restarts.
+                    nominal = ([.2, 0., -.6, 0., 1.4, 0., -.8, 0.] if attempt == 1
+                               else [.2, 0., .5, 0., -1.4, 0., .9, 0.])
+                    for index, value in zip(self.arm, nominal):
+                        if index in active:
+                            q[index] = value
+                else:
+                    q[active] += self.rng.normal(0, min(1.2, .3 * attempt), len(active))
                 if self.name_to_action["torso_lift_joint"] in active:
                     q[self.name_to_action["torso_lift_joint"]] = .18 + .08 * (attempt % 2)
                 q = np.clip(q, self.lower, self.upper)
@@ -238,6 +266,8 @@ class MotionPlanner:
                 pe, re = np.linalg.norm(ep), np.linalg.norm(er)
                 cost = pe * pe + .16 * re * re
                 if pe <= position_tolerance and re <= orientation_tolerance:
+                    if collision_options is not None and not self.collision_free(q, **collision_options):
+                        break
                     return q.copy()
                 if cost < best_cost - 1e-9:
                     best_cost, stalled = cost, 0
@@ -276,6 +306,59 @@ class MotionPlanner:
         oR = np.asarray(p.getMatrixFromQuaternion(oq)).reshape(3, 3)
         self.attached = (R.T @ (np.asarray(op) - pos), R.T @ oR)
 
+    def fingers_clear(self, position, rotation, gap, margin=.0002):
+        """Cheap exact finger-box prefilter before expensive whole-arm IK.
+
+        These are shadow-only copies of the two URDF collision boxes, used to
+        reject impossible openings/approaches. Full robot path checks follow.
+        """
+        p.resetBasePositionAndOrientation(self.object, *self.object_pose, physicsClientId=self.client)
+        if not hasattr(self, '_finger_proxies'):
+            shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=[.0315, .006, .012],
+                                           physicsClientId=self.client)
+            self._finger_proxies = [p.createMultiBody(baseMass=0, baseCollisionShapeIndex=shape,
+                                      physicsClientId=self.client) for _ in range(2)]
+        for body, sign in zip(self._finger_proxies, [-1., 1.]):
+            center = np.asarray(position) + np.asarray(rotation) @ [0., sign*(gap/2+.006), 0.]
+            p.resetBasePositionAndOrientation(body, center, Rotation.from_matrix(rotation).as_quat(),
+                                             physicsClientId=self.client)
+            for obstacle in [self.object] + self.world:
+                if p.getClosestPoints(body, obstacle, margin, physicsClientId=self.client):
+                    return False
+        return True
+
+    def radial_extent(self, q):
+        """Conservative turning radius of robot plus attached object.
+
+        Measure at zero base yaw so world AABBs do not spuriously enlarge the
+        base's own rectangle when the current stance happens to be rotated.
+        """
+        canonical = np.asarray(q).copy()
+        canonical[:3] = 0.
+        position, rotation = self.tcp_pose(canonical)
+        op = position + rotation @ self.attached[0]
+        oq = Rotation.from_matrix(rotation @ self.attached[1]).as_quat()
+        p.resetBasePositionAndOrientation(self.object, op, oq, physicsClientId=self.client)
+        boxes = [p.getAABB(self.robot, link, physicsClientId=self.client)
+                 for link in self.collision_links]
+        boxes.append(p.getAABB(self.object, physicsClientId=self.client))
+        base = np.asarray(self._live_pose(self.env.robot_id)[0])[:2]
+        corners = np.array([[x,y] for lo,hi in boxes
+                            for x in (lo[0],hi[0]) for y in (lo[1],hi[1])])
+        return float(np.linalg.norm(corners-base, axis=1).max())
+
+    def footprint_bounds(self, q):
+        """World-axis footprint relative to the base at the actual fixed yaw."""
+        position, rotation = self.tcp_pose(q)
+        p.resetBasePositionAndOrientation(self.object, position+rotation@self.attached[0],
+            Rotation.from_matrix(rotation@self.attached[1]).as_quat(), physicsClientId=self.client)
+        boxes = [p.getAABB(self.robot, link, physicsClientId=self.client)
+                 for link in self.collision_links]
+        boxes.append(p.getAABB(self.object, physicsClientId=self.client))
+        base = np.asarray(self._live_pose(self.env.robot_id)[0])[:2] + np.asarray(q)[:2]
+        return (np.min([b[0] for b in boxes],axis=0)[:2]-base,
+                np.max([b[1] for b in boxes],axis=0)[:2]-base)
+
     def collision_free(self, q, allow_finger_object=False, carrying=False, margin=0.002):
         """All scene bodies and non-exempt self pairs; only intended pad contact allowed.
 
@@ -284,10 +367,13 @@ class MotionPlanner:
         """
         q = np.asarray(q, float)
         if (q.shape != self.lower.shape or not np.isfinite(q).all() or
-                np.any(q < self.lower - 1e-6) or np.any(q > self.upper + 1e-6)):
+                np.any(q < self.lower - .001) or np.any(q > self.upper + .001)):
             self.last_failure = "joint configuration violates finite joint limits"
             return False
-        self.set_q(q)
+        # Bullet's constraint solver can leave measured joints a fraction of a
+        # millimetre outside a stop. Project this solver slop onto the URDF
+        # limits; collision clearance remains unchanged. Larger violations fail.
+        self.set_q(np.clip(q, self.lower, self.upper))
         if carrying:
             if self.attached is None:
                 raise RuntimeError("attach_object() must precede carrying collision checks")
@@ -306,6 +392,12 @@ class MotionPlanner:
                 return False
         for c in p.getClosestPoints(self.robot, self.object, margin, physicsClientId=self.client):
             if (allow_finger_object or carrying) and c[3] in self.finger_links:
+                continue
+            if carrying and c[3] == self.tcp and c[8] >= -.001:
+                # A closed grasp may rest against the palm after physical
+                # settling. Permit touching/contact slop of the held object,
+                # but reject penetration and collisions with the rest of the
+                # arm. Live palm/object collision response stays enabled.
                 continue
             self.last_failure = f"robot link {c[3]} near object ({c[8]:.4f} m)"
             return False

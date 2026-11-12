@@ -1,0 +1,72 @@
+pybullet build time: Jan 29 2025 23:16:28
+test_antipodal_axis_and_friction_margin (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_deterministic_diverse_ranked_candidates (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_finite_segment_distance (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_friction_cone_rejects_near_boundary_under_uncertainty (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_invalid_inputs (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_inward_normals_are_not_accepted (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_local_opposing_wall_is_not_patch_support (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_support_filter_applies_to_every_candidate (test_grasp_candidates.GraspCandidatesTests) ... ok
+test_floor_pickup_still_has_to_clear_table (test_grasp_execution.AddedGeometryTests) ... ok
+test_old_pad_metric_accepts_point_outside_pad (test_grasp_execution.AddedGeometryTests) ... ok
+test_capture_range_accounts_for_an_object_held_near_its_end (test_grasp_execution.GraspExecutionTests) ... ok
+test_carried_contact_loss_during_final_settle_is_failure (test_grasp_execution.GraspExecutionTests) ... ok
+test_carried_motion_preserves_closure_command (test_grasp_execution.GraspExecutionTests) ... ok
+test_center_rise_alone_does_not_pass_lift (test_grasp_execution.GraspExecutionTests) ... ok
+test_closure_requires_consecutive_two_pad_contacts (test_grasp_execution.GraspExecutionTests) ... ok
+test_collinear_validation_samples_do_not_add_execution_stops (test_grasp_execution.GraspExecutionTests) ... ok
+test_contacts_require_loaded_inner_faces (test_grasp_execution.GraspExecutionTests) ... ok
+test_empty_path_and_failed_opening_are_explicit_errors (test_grasp_execution.GraspExecutionTests) ... ok
+test_execution_targets_obey_velocity_and_acceleration_caps (test_grasp_execution.GraspExecutionTests) ... ok
+test_execution_uses_the_same_short_continuous_arc_as_planning (test_grasp_execution.GraspExecutionTests) ... ok
+test_failed_closure_never_establishes_reference (test_grasp_execution.GraspExecutionTests) ... ok
+test_gap_conversion_respects_joint_travel (test_grasp_execution.GraspExecutionTests) ... ok
+test_hand_frame_aligns_flat_pads_with_normals_despite_staggered_samples (test_grasp_execution.GraspExecutionTests) ... ok
+test_holding_rejects_separation_but_allows_loaded_rolling_contact (test_grasp_execution.GraspExecutionTests) ... ok
+test_lift_checks_at_least_fifty_steps_and_bottom_clearance (test_grasp_execution.GraspExecutionTests) ... ok
+test_object_movement_during_transit_blocks_insertion (test_grasp_execution.GraspExecutionTests) ... ok
+test_pressure_maintenance_only_tightens_the_unloaded_pad (test_grasp_execution.GraspExecutionTests) ... ok
+test_settling_rejects_free_object (test_grasp_execution.GraspExecutionTests) ... ok
+test_settling_requires_support_and_small_angular_velocity (test_grasp_execution.GraspExecutionTests) ... ok
+test_stale_position_and_rotation_fail_before_any_motion (test_grasp_execution.GraspExecutionTests) ... ok
+test_zero_direction_rejected_and_half_turn_preserved (test_grasp_execution.GraspExecutionTests) ... ok
+b3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_linkb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_rgb_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_rgb_optical_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_depth_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_depth_optical_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_linkb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_rgb_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_rgb_optical_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_depth_frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+No inertial data for link, using mass=1, localinertiadiagonal = 1,1,1, identity local inertial frameb3Warning[examples/Importers/ImportURDFDemo/BulletUrdfImporter.cpp,126]:
+head_camera_depth_optical_frametest_analytic_jacobian_matches_independent_differences_across_poses (test_grasp_motion.MotionTests) ... ok
+test_half_turn_is_not_zero (test_grasp_motion.MotionTests) ... ok
+test_ik_roundtrip_and_live_isolation (test_grasp_motion.MotionTests) ... ok
+test_jacobian_matches_fk (test_grasp_motion.MotionTests) ... ok
+test_rejects_table_intersection (test_grasp_motion.MotionTests) ... ok
+test_solver_slop_is_projected_but_large_limit_violations_fail (test_grasp_motion.MotionTests) ... ok
+test_visual_only_goal_is_not_queried_as_collision_geometry (test_grasp_motion.MotionTests) ... ok
+test_cartesian_shortcut_rejects_tcp_curvature (test_grasp_motion.PureMotionTests) ... ok
+test_half_turn_is_not_zero (test_grasp_motion.PureMotionTests) ... ok
+test_numerical_jacobian_uses_requested_columns_and_restores_state (test_grasp_motion.PureMotionTests) ... ok
+test_rotation_residual_restores_orientation (test_grasp_motion.PureMotionTests) ... ok
+test_shortcuts_recheck_obstacles (test_grasp_motion.PureMotionTests) ... ok
+test_departure_from_an_under_overhang_stance_is_outward (test_run_task_routing.TableRouteTests) ... ok
+test_far_side_stance_goes_around_the_table (test_run_task_routing.TableRouteTests) ... ok
+test_north_stance_approaches_normally_between_the_legs (test_run_task_routing.TableRouteTests) ... ok
+
+----------------------------------------------------------------------
+Ran 46 tests in 2.352s
+
+OK
