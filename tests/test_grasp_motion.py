@@ -28,6 +28,10 @@ class _LiveScene:
         obj = sorted((ROOT / "assets/ycb_objects").glob("*"))[self.object_idx]
         self.object_id = p.loadURDF(str(obj / "coacd_decomposed_object_one_link.urdf"),
                                     [0, 0, .8], physicsClientId=c)
+        visual = p.createVisualShape(p.GEOM_SPHERE, radius=.05, physicsClientId=c)
+        self.goal_marker_id = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=visual, basePosition=[2, 0, .9],
+            useMaximalCoordinates=True, physicsClientId=c)
         self.joint_indices = []
         lo, hi = [], []
         for j in range(p.getNumJoints(self.robot_id, physicsClientId=c)):
@@ -73,6 +77,35 @@ class MotionTests(unittest.TestCase):
             pos1, R1 = m.tcp_pose(perturbed)
             np.testing.assert_allclose((pos1 - pos) / 1e-4, jp[:, j], atol=.004, rtol=.02)
             np.testing.assert_allclose(rotation_error(R1, R) / 1e-4, jr[:, j], atol=.004, rtol=.02)
+
+    def test_analytic_jacobian_matches_independent_differences_across_poses(self):
+        m = self.planner
+        rng = np.random.default_rng(17)
+        for _ in range(12):
+            q = self.env.agent_qpos.copy()
+            q[:3] = [rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-np.pi, np.pi)]
+            q[m.arm] = rng.uniform(m.lower[m.arm], m.upper[m.arm])
+            m.set_q(q)
+            jp, jr = m._jacobian()
+            np_, nr = m._numerical_jacobian()
+            np.testing.assert_allclose(jp, np_, atol=.002)
+            np.testing.assert_allclose(jr, nr, atol=.002)
+
+    def test_visual_only_goal_is_not_queried_as_collision_geometry(self):
+        self.assertNotIn(self.env.goal_marker_id, self.planner.live_to_shadow)
+        from grasping import support_body
+        body, top = support_body(self.env, np.array([0., 0., .8]))
+        self.assertNotEqual(body, self.env.goal_marker_id)
+        self.assertGreater(top, .5)
+
+    def test_solver_slop_is_projected_but_large_limit_violations_fail(self):
+        m = self.planner
+        q = self.env.agent_qpos.copy()
+        q[3] = -.0002
+        self.assertTrue(m.collision_free(q), m.last_failure)
+        self.assertEqual(m.q[3], 0.)
+        q[3] = -.01
+        self.assertFalse(m.collision_free(q))
 
     def test_ik_roundtrip_and_live_isolation(self):
         m, e = self.planner, self.env
@@ -125,7 +158,7 @@ class PureMotionTests(unittest.TestCase):
         planner.arm = [0, 1, 2]
         planner.set_q([.4, .3, .2, .7])
         original = planner.q.copy()
-        jp, jr = planner._jacobian([0, 2])
+        jp, jr = planner._numerical_jacobian([0, 2])
         np.testing.assert_allclose(jp[:, 0], [.8, 0, 0], atol=1e-8)
         np.testing.assert_allclose(jr[:, 2], [0, 0, 1], atol=1e-8)
         np.testing.assert_array_equal(jp[:, 1], [0, 0, 0])

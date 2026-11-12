@@ -7,6 +7,7 @@ import trimesh
 from pathlib import Path
 from maze_utils import generate_maze_map, add_left_room_to_maze, create_maze_urdf
 from copy import deepcopy
+import tempfile
 from keyboard_control import KeyBoardController
 from utils import closest_joint_values
 
@@ -15,10 +16,20 @@ class PickNavReachEnv:
     def __init__(self, 
                  seed=0,
                  object_idx=11,
+                 gui=True,
+                 realtime=True,
                  ):
         self.set_seed(seed)
 
-        self.pb_physics_client = p.connect(p.GUI)
+        self.pb_physics_client = p.connect(p.GUI if gui else p.DIRECT)
+        # The light, heavily damped fingers have millimetre-scale steady-state
+        # integration error at Bullet's default timestep. Internal substeps
+        # improve accuracy without changing simulated time or action budgets.
+        p.setPhysicsEngineParameter(numSubSteps=4, numSolverIterations=200,
+                                   physicsClientId=self.pb_physics_client)
+        self.realtime = realtime
+        self._maze_dir = tempfile.TemporaryDirectory(prefix="cs4278-maze-")
+        self.maze_urdf_path = Path(self._maze_dir.name) / "maze.urdf"
         p.setAdditionalSearchPath(pybullet_data.getDataPath()) 
         p.setGravity(0,0,-9.8)
 
@@ -119,7 +130,7 @@ class PickNavReachEnv:
         object_mesh_path = (ycb_objects_paths[self.object_idx] / "textured.obj").absolute()
         self.object_id = p.loadURDF(str(object_urdf_path), basePosition=[0, 0, 1.0], useFixedBase=0)
         self.object_canonical_mesh = trimesh.load(str(object_mesh_path))
-        object_canonical_pc, face_indices = trimesh.sample.sample_surface(self.object_canonical_mesh, 1024)
+        object_canonical_pc, face_indices = trimesh.sample.sample_surface(self.object_canonical_mesh, 1024, seed=self.seed)
         self.object_canonical_pc = object_canonical_pc.astype(np.float32)  # (1024, 3)
         self.object_canonical_normals = self.object_canonical_mesh.face_normals[face_indices].astype(np.float32)  # (1024, 3), outward normals
     
@@ -174,7 +185,7 @@ class PickNavReachEnv:
 
         self.cube_positions = create_maze_urdf(
             maze, 
-            urdf_path="./assets/maze.urdf",
+            urdf_path=str(self.maze_urdf_path),
             grid_xy=grid_xy, grid_z=grid_z,
             maze_center_x=(n_cols-room_width)/2*grid_xy + maze_offset, 
             maze_center_y=0.0, 
@@ -182,7 +193,7 @@ class PickNavReachEnv:
             box_color=(0.95, 0.95, 0.98, 1.0),
         )
 
-        p.loadURDF("./assets/maze.urdf", useFixedBase=1, flags=p.URDF_MERGE_FIXED_LINKS)
+        p.loadURDF(str(self.maze_urdf_path), useFixedBase=1, flags=p.URDF_MERGE_FIXED_LINKS)
         
     def visualize_pc_and_normals(self, object_pc, object_normals, visualize_normals=False):
         # remove old debug items
@@ -238,6 +249,9 @@ class PickNavReachEnv:
         n = len(self.joint_indices)
         if action.size != n:
             raise ValueError(f"Action size {action.size} != controllable dofs {n}")
+        controller = getattr(self, 'grip_controller', None)
+        if controller is not None:
+            action = controller(action)
 
         # action = np.clip(action, -1.0, 1.0)
         qpos, _, _, _ = self._get_state()
@@ -277,7 +291,8 @@ class PickNavReachEnv:
 
         for _ in range(self.substeps):
             p.stepSimulation()
-            time.sleep(1./240.)
+            if self.realtime:
+                time.sleep(1./240.)
 
         obs = self._get_obs()
 

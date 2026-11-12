@@ -1,18 +1,21 @@
-# Updated grasping pipeline
+# Grasping and full-task runner
 
-See [GRASPING_GUIDE.md](GRASPING_GUIDE.md) for the implementation, mathematical details,
-old-method critique, research sources, and exact validation limits.
+See [GRASPING_GUIDE.md](GRASPING_GUIDE.md) for the grasping, lifting, carriage,
+navigation and goal-positioning strategy, and [TASK_VALIDATION.md](TASK_VALIDATION.md)
+for measured per-object/per-seed results and limitations.
 
 ```bash
 pip install -r requirements.txt
 python run_task.py --headless --seed 3 --object 2 --grasp-only
 python -m unittest discover -s tests -v
+python evaluate_tasks.py --seeds 0 1 3 --workers 4 --timeout 600 --output outputs/recheck
 ```
 
 The official object drop is the default. `--place-on-table` is an explicit debug-only setup.
-Navigation code is unchanged. The grasp controller, arm planning, carry-pose motion, and
-final arm reach use the updated modules. Simulator pickup performance has not yet been
-measured on this revision; see the guide before interpreting the tests.
+The runner uses physical jaw contact, collision-checked arm motion, a measured carriage
+footprint, fixed-yaw holonomic A* travel, and whole-body goal positioning. The JSON
+results distinguish a verified initial pickup from a completed task. Passing the
+component tests does not establish that every object can complete the full task.
 
 ---
 

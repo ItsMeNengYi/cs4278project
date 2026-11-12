@@ -29,16 +29,9 @@ TUCK[6:13] = [1.32, 1.40, -0.2, 1.72, 0.0, 1.66, 0.0]   # arm folded over the ba
 def make_env(seed=0, gui=False, realtime=False):
     """Build PickNavReachEnv, headless by default and without the per-step sleep."""
     os.chdir(ROOT)              # the env loads its assets with relative paths
-    E.time = time if realtime else types.SimpleNamespace(sleep=lambda s: None)
-    connect = p.connect
-    if not gui:
-        p.connect = lambda *a, **k: connect(p.DIRECT)
-    try:
-        with contextlib.redirect_stdout(io.StringIO()):
-            env = E.PickNavReachEnv(seed=seed)
-            env.reset()
-    finally:
-        p.connect = connect
+    with contextlib.redirect_stdout(io.StringIO()):
+        env = E.PickNavReachEnv(seed=seed, gui=gui, realtime=realtime)
+        env.reset()
     return env
 
 

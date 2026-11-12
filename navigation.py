@@ -125,6 +125,8 @@ def follow_path(env, waypoints, hold_q, max_step=0.01, max_lag=0.15, tol=0.05, m
     pts = np.array(waypoints)                                    # (N, 2) world xy
     cum = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))])
     total, s = cum[-1], 0.0
+    if total < 1e-10:
+        return True, 0, 0
     collisions = 0
     for i in range(max_iters):
         q = env.agent_qpos
@@ -162,7 +164,7 @@ def corners(waypoints, eps=1e-6):
 
 
 def follow_path_facing(env, waypoints, hold_q, v_max=0.01, accel=0.0004, w_max=0.01, w_accel=0.0003,
-                       max_lag=0.05, tol=0.02, max_iters=15000, still_ok=None):
+                       max_lag=0.05, tol=0.02, max_iters=15000, still_ok=None, face_path=True):
     """Drive the path always facing the direction of travel: at each corner, stop and turn in place,
     then drive the straight stretch forwards. Speed and turn rate ramp up and down (trapezoidal
     profiles), so a held object is never jerked. Units: m and rad per env step.
@@ -201,17 +203,18 @@ def follow_path_facing(env, waypoints, hold_q, v_max=0.01, accel=0.0004, w_max=0
                 continue
             h = d / length
             # turn in place to face the stretch
-            yaw0 = float(env.agent_qpos[2])
-            turn = math.atan2(math.sin(math.atan2(h[1], h[0]) - yaw0), math.cos(math.atan2(h[1], h[0]) - yaw0))
-            done, w = 0.0, 0.0
-            while abs(turn) - done > 1e-4:
-                left = abs(turn) - done
-                w = min(w + w_accel, w_max, math.sqrt(2 * w_accel * left), left)
-                done += w
-                action[2] = yaw0 + math.copysign(done, turn)
-                tick()
-            for _ in range(30):                                     # let the turn settle
-                tick()
+            if face_path:
+                yaw0 = float(env.agent_qpos[2])
+                turn = math.atan2(math.sin(math.atan2(h[1], h[0]) - yaw0), math.cos(math.atan2(h[1], h[0]) - yaw0))
+                done, w = 0.0, 0.0
+                while abs(turn) - done > 1e-4:
+                    left = abs(turn) - done
+                    w = min(w + w_accel, w_max, math.sqrt(2 * w_accel * left), left)
+                    done += w
+                    action[2] = yaw0 + math.copysign(done, turn)
+                    tick()
+                for _ in range(30):                                 # let the turn settle
+                    tick()
             # drive forwards along the stretch
             s, v = 0.0, 0.0
             while s < length - 1e-4:
