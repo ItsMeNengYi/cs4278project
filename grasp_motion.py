@@ -45,6 +45,8 @@ class MotionPlanner:
         self.attached = None
         self.last_failure = ""
         self.world = []
+        self.maze_boxes = []
+        self.maze_bounds = np.empty((0, 2, 3))
         self.live_to_shadow = {}
         try:
             self._load_scene()
@@ -117,6 +119,8 @@ class MotionPlanner:
             elif "table" in label:
                 b = self._load(Path(pybullet_data.getDataPath()) / "table/table.urdf", live)
             elif "maze" in label:
+                if self._load_maze_boxes(live):
+                    continue
                 b = self._load(getattr(self.env, "maze_urdf_path", ROOT / "assets/maze.urdf"), live,
                                flags=p.URDF_MERGE_FIXED_LINKS)
             elif not any(p.getCollisionShapeData(live, link, physicsClientId=self.live_client)
@@ -127,6 +131,43 @@ class MotionPlanner:
             self.world.append(b)
         self.root_rotation = np.asarray(p.getMatrixFromQuaternion(
             self._live_pose(self.env.robot_id)[1])).reshape(3, 3)
+
+    def _load_maze_boxes(self, live):
+        """Index the unchanged static wall boxes for local planning queries.
+
+        Bullet's explicit closest-points query visits distant children of a
+        merged compound too. Separate shadow boxes permit a conservative AABB
+        rejection before the exact queries; live physics remains unchanged.
+        """
+        if p.getNumJoints(live, physicsClientId=self.live_client):
+            return False
+        shapes = p.getCollisionShapeData(live, -1, physicsClientId=self.live_client)
+        if not shapes or any(shape[2] != p.GEOM_BOX for shape in shapes):
+            return False
+        base_position, base_rotation = self._live_pose(live)
+        shared = {}
+        for shape in shapes:
+            dimensions = tuple(shape[3])
+            if dimensions not in shared:
+                shared[dimensions] = p.createCollisionShape(p.GEOM_BOX,
+                    halfExtents=(np.asarray(dimensions)/2).tolist(), physicsClientId=self.client)
+            position, rotation = p.multiplyTransforms(base_position, base_rotation, shape[5], shape[6])
+            body = p.createMultiBody(baseMass=0, baseCollisionShapeIndex=shared[dimensions],
+                basePosition=position, baseOrientation=rotation, physicsClientId=self.client)
+            self.maze_boxes.append(body)
+        self.maze_bounds = np.asarray([p.getAABB(body, physicsClientId=self.client)
+                                       for body in self.maze_boxes])
+        return True
+
+    def _world_candidates(self, body, margin, links=None):
+        if not self.maze_boxes:
+            return self.world
+        bounds = np.asarray([p.getAABB(body, link, physicsClientId=self.client)
+                             for link in ([-1] if links is None else links)])
+        lower, upper = bounds[:, 0].min(axis=0), bounds[:, 1].max(axis=0)
+        overlap = (np.all(self.maze_bounds[:, 0] <= upper+margin, axis=1)
+                   & np.all(self.maze_bounds[:, 1] >= lower-margin, axis=1))
+        return self.world + [self.maze_boxes[i] for i in np.flatnonzero(overlap)]
 
     def _build_self_exclusions(self):
         # Adjacent links, fixed rigid clusters and the supplied semantic model.
@@ -159,6 +200,26 @@ class MotionPlanner:
             self.self_exclusions.add(tuple(sorted((a, b))))
         self.collision_links = [j for j in links if p.getCollisionShapeData(
             self.robot, j, physicsClientId=self.client)]
+        self.self_pair_indices = np.asarray([(i, j)
+            for i, a in enumerate(self.collision_links)
+            for j, b in enumerate(self.collision_links) if i < j
+            and tuple(sorted((a, b))) not in self.self_exclusions], dtype=int).reshape(-1, 2)
+
+    def _self_collision(self, margin):
+        """Cull separated/exempt link pairs before exact self-distance queries."""
+        bounds = np.asarray([p.getAABB(self.robot, link, physicsClientId=self.client)
+                             for link in self.collision_links])
+        left, right = self.self_pair_indices.T
+        overlap = (np.all(bounds[left, 0] <= bounds[right, 1]+margin, axis=1)
+                   & np.all(bounds[right, 0] <= bounds[left, 1]+margin, axis=1))
+        for i, j in self.self_pair_indices[overlap]:
+            a, b = self.collision_links[i], self.collision_links[j]
+            contacts = p.getClosestPoints(self.robot, self.robot, margin,
+                linkIndexA=a, linkIndexB=b, physicsClientId=self.client)
+            if contacts:
+                self.last_failure = f'self collision {a},{b} ({min(c[8] for c in contacts):.4f} m)'
+                return True
+        return False
 
     def sync_scene(self):
         """Read live poses and joints into the shadow; never advances live physics."""
@@ -322,8 +383,14 @@ class MotionPlanner:
             center = np.asarray(position) + np.asarray(rotation) @ [0., sign*(gap/2+.006), 0.]
             p.resetBasePositionAndOrientation(body, center, Rotation.from_matrix(rotation).as_quat(),
                                              physicsClientId=self.client)
-            for obstacle in [self.object] + self.world:
-                if p.getClosestPoints(body, obstacle, margin, physicsClientId=self.client):
+            for obstacle in [self.object] + self._world_candidates(body, margin):
+                contacts = p.getClosestPoints(body, obstacle, margin, physicsClientId=self.client)
+                if contacts:
+                    separation = min(contact[8] for contact in contacts)
+                    label = 'object collision geometry' if obstacle == self.object else 'support/world geometry'
+                    self.last_failure = (f'open finger near {label}: signed separation '
+                                         f'{1000*separation:.3f} mm, required {1000*margin:.3f} mm; '
+                                         f'physical jaw gap {1000*gap:.2f} mm')
                     return False
         return True
 
@@ -384,7 +451,7 @@ class MotionPlanner:
             p.resetBasePositionAndOrientation(self.object, op, oq, physicsClientId=self.client)
         else:
             p.resetBasePositionAndOrientation(self.object, *self.object_pose, physicsClientId=self.client)
-        for body in self.world:
+        for body in self._world_candidates(self.robot, margin, self.collision_links):
             for c in p.getClosestPoints(self.robot, body, margin, physicsClientId=self.client):
                 if body == self.floor and c[3] in self.floor_links:
                     continue
@@ -401,14 +468,10 @@ class MotionPlanner:
                 continue
             self.last_failure = f"robot link {c[3]} near object ({c[8]:.4f} m)"
             return False
-        for c in p.getClosestPoints(self.robot, self.robot, margin, physicsClientId=self.client):
-            a, b = sorted((c[3], c[4]))
-            if a == b or (a, b) in self.self_exclusions:
-                continue
-            self.last_failure = f"self collision {a},{b} ({c[8]:.4f} m)"
+        if self._self_collision(margin):
             return False
         if carrying:
-            for body in self.world:
+            for body in self._world_candidates(self.object, 0.):
                 if any(c[8] < -.001 for c in p.getClosestPoints(
                         self.object, body, 0., physicsClientId=self.client)):
                     self.last_failure = f"carried object intersects scene body {body}"

@@ -360,9 +360,19 @@ def plan_grasp(env, pair, points, robot_xy, clearance=.008, standoff=.05,
         _, top = support_body(env, env._get_state()[2])
         gap = MAX_OPENING
         if gap - pair['width'] < .0004:
+            rejected('jaw_width')
+            mp.last_failure = (f'contact width {1000*pair["width"]:.2f} mm exceeds the '
+                               f'{1000*gap:.2f} mm jaw gap with 0.40 mm opening reserve')
             return None
         q_now = env.agent_qpos.astype(float)
-        for ap in _approaches(pair, points, top, robot_xy)[:n_dirs_tried]:
+        approaches = _approaches(pair, points, top, robot_xy)[:n_dirs_tried]
+        if not approaches:
+            rejected('hand_approach')
+            mp.last_failure = ('no hand approach fits the palm, 30.5 mm available finger reach '
+                               'and support clearance at the sampled contacts; an antipodal '
+                               'pair alone does not establish hand accessibility')
+            return None
+        for ap in approaches:
             d, R, target = ap['dir'], ap['rotation'], ap['tcp']
             if not vertical_range[0] <= d[2] <= vertical_range[1]:
                 continue

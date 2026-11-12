@@ -1,7 +1,8 @@
 """Full task: wait for the object, drive to it, grasp, lift, hold, carry it through the maze, reach the goal.
 
-    python run_task.py                     # GUI, seed 42, object 5
+    python run_task.py                     # GUI, fastest execution, seed 42, object 5
     python run_task.py --seed 3 --object 2 --headless
+    python run_task.py --realtime          # pace physics for watching the GUI
 """
 import argparse
 import json
@@ -22,9 +23,9 @@ MAX_EXTENT = G.CARRY_HALF_SPAN           # maximum half-size of the centred worl
 CLEARANCE = 0.02                        # opening reserved beyond the grasp width
 
 
-def make_env(seed, obj, headless):
+def make_env(seed, obj, headless, realtime=False):
     env = N.PickNavReachEnv(seed=seed, object_idx=obj, gui=not headless,
-                            realtime=not headless)
+                            realtime=realtime)
     env.reset()
     return env
 
@@ -371,6 +372,8 @@ def main():
     ap.add_argument('--seed', type=int, default=42)
     ap.add_argument('--object', type=int, default=5)
     ap.add_argument('--headless', action='store_true')
+    ap.add_argument('--realtime', action='store_true',
+                    help='pace physics at real time; by default run as fast as possible')
     ap.add_argument('--drop', action='store_true', help='official drop is already the default')
     ap.add_argument('--place-on-table', action='store_true', help='debug upright placement instead of official drop')
     ap.add_argument('--grasp-only', action='store_true')
@@ -378,10 +381,12 @@ def main():
     args = ap.parse_args()
     env = None
     result = dict(seed=args.seed, object_index=args.object,
+                  solver_iterations=200,
+                  internal_substeps=4, realtime=args.realtime,
                   setup='debug_upright' if args.place_on_table else 'official_drop')
     started = time.perf_counter()
     try:
-        env = make_env(args.seed, args.object, args.headless)
+        env = make_env(args.seed, args.object, args.headless, realtime=args.realtime)
         env.result_path = args.result
         if args.place_on_table:
             place_on_table(env)

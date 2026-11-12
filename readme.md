@@ -3,15 +3,21 @@
 See [GRASPING_GUIDE.md](GRASPING_GUIDE.md) for the grasping, lifting, carriage,
 navigation and goal-positioning strategy, and [TASK_VALIDATION.md](TASK_VALIDATION.md)
 for measured per-object/per-seed results and limitations.
+See [PERFORMANCE.md](PERFORMANCE.md) for measured speed improvements and the
+collision-geometry diagnosis of objects 0 and 11.
 
 ```bash
 pip install -r requirements.txt
+python run_task.py --object 6 --seed 0                 # GUI, no deliberate pacing
+python run_task.py --object 6 --seed 0 --realtime      # GUI, paced for watching
 python run_task.py --headless --seed 3 --object 2 --grasp-only
 python -m unittest discover -s tests -v
 python evaluate_tasks.py --seeds 0 1 3 --workers 4 --timeout 600 --output outputs/recheck
 ```
 
 The official object drop is the default. `--place-on-table` is an explicit debug-only setup.
+Both GUI and headless task runs now advance as fast as the machine permits by
+default; `--realtime` enables physics pacing. Solver accuracy is unchanged.
 The runner uses physical jaw contact, collision-checked arm motion, a measured carriage
 footprint, fixed-yaw holonomic A* travel, and whole-body goal positioning. The JSON
 results distinguish a verified initial pickup from a completed task. Passing the

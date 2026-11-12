@@ -1,0 +1,41 @@
+{
+  "seed": 0,
+  "object_index": 6,
+  "solver_iterations": 50,
+  "internal_substeps": 4,
+  "realtime": false,
+  "setup": "official_drop",
+  "error": "RuntimeError: Navigation failed or the object was dropped: loaded pads [22]",
+  "stage": "navigation",
+  "verified_pickup": true,
+  "navigation_reached": false,
+  "success": false,
+  "lift": 0.29938090309455656,
+  "lift_step": 1745,
+  "hold_drift": 0.00031342544539856703,
+  "rotation_drift": 0.11763534555245088,
+  "bottom_clearance": 0.28178327620799026,
+  "held": true,
+  "hold_steps": 60,
+  "within_step_budget": true,
+  "contact_error_m": 0.0017337861117834984,
+  "carry_method": "orientation_preserving_cartesian",
+  "footprint_m": [
+    0.6000283266284826,
+    0.5003558566596764,
+    0.4953515829343048
+  ],
+  "footprint_half_size_m": [
+    0.46376546956765263,
+    0.4469406838985864
+  ],
+  "footprint_offset_m": [
+    0.08613318780836765,
+    -0.07977558517375188
+  ],
+  "navigation_steps": 150,
+  "robot_wall_steps": 0,
+  "object_hit_steps": 0,
+  "total_env_steps": 2288,
+  "wall_seconds": 41.199641321999934
+}

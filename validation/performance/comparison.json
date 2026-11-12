@@ -1,0 +1,75 @@
+{
+  "object_index": 6,
+  "seed": 0,
+  "profiled_runs": [
+    {
+      "label": "before",
+      "wall_seconds": 84.93400095600009,
+      "total_env_steps": 4501,
+      "success": true,
+      "goal_error_m": 0.00015739672679378067,
+      "physics_internal_substeps": 4,
+      "solver_iterations": 200,
+      "profile": {
+        "collision_free": {
+          "calls": 2918,
+          "own_seconds": 0.234779068,
+          "cumulative_seconds": 11.557539972
+        },
+        "plan_cartesian": {
+          "calls": 20,
+          "own_seconds": 0.006837171,
+          "cumulative_seconds": 11.676817431
+        },
+        "<built-in method pybullet.stepSimulation>": {
+          "calls": 22505,
+          "own_seconds": 65.599753248,
+          "cumulative_seconds": 65.599753248
+        },
+        "<built-in method pybullet.getClosestPoints>": {
+          "calls": 22593,
+          "own_seconds": 10.755205437,
+          "cumulative_seconds": 10.755205437
+        }
+      }
+    },
+    {
+      "label": "after",
+      "wall_seconds": 77.05375618799962,
+      "total_env_steps": 4501,
+      "success": true,
+      "goal_error_m": 0.00015739672679378067,
+      "physics_internal_substeps": 4,
+      "solver_iterations": 200,
+      "profile": {
+        "collision_free": {
+          "calls": 2918,
+          "own_seconds": 0.157942887,
+          "cumulative_seconds": 2.131253418
+        },
+        "plan_cartesian": {
+          "calls": 20,
+          "own_seconds": 0.006261381000000001,
+          "cumulative_seconds": 3.3222990090000004
+        },
+        "_self_collision": {
+          "calls": 2917,
+          "own_seconds": 0.12212024900000001,
+          "cumulative_seconds": 0.32899632100000004
+        },
+        "<built-in method pybullet.stepSimulation>": {
+          "calls": 22505,
+          "own_seconds": 66.371667731,
+          "cumulative_seconds": 66.371667731
+        },
+        "<built-in method pybullet.getClosestPoints>": {
+          "calls": 32696,
+          "own_seconds": 0.71716913,
+          "cumulative_seconds": 0.71716913
+        }
+      }
+    }
+  ],
+  "removed_gui_sleep_seconds_for_this_action_count": 93.77083333333333,
+  "wall_time_reduction_percent": 9.278080249725685
+}

@@ -1,0 +1,41 @@
+{
+  "seed": 0,
+  "object_index": 6,
+  "solver_iterations": 200,
+  "internal_substeps": 4,
+  "realtime": false,
+  "setup": "official_drop",
+  "stage": "complete",
+  "verified_pickup": true,
+  "navigation_reached": true,
+  "success": true,
+  "lift": 0.29738420480421535,
+  "lift_step": 1653,
+  "hold_drift": 4.406209461064506e-05,
+  "rotation_drift": 0.0033307925279302715,
+  "bottom_clearance": 0.2752154390090691,
+  "held": true,
+  "hold_steps": 60,
+  "within_step_budget": true,
+  "contact_error_m": 0.0020842960958922883,
+  "carry_method": "orientation_preserving_cartesian",
+  "footprint_m": [
+    0.5946168325555365,
+    0.4875391802543265,
+    0.4814557382889113
+  ],
+  "footprint_half_size_m": [
+    0.46643438560322154,
+    0.36147849367663254
+  ],
+  "footprint_offset_m": [
+    0.09327130110652798,
+    -9.556993665679747e-05
+  ],
+  "navigation_steps": 2172,
+  "robot_wall_steps": 0,
+  "object_hit_steps": 0,
+  "dist_to_goal": 0.00015739672679378067,
+  "total_env_steps": 4501,
+  "wall_seconds": 77.05375618799962
+}
