@@ -43,6 +43,8 @@ From the existing checkout:
 
 Object indices are the sorted directory order in assets/ycb_objects, from 0 through 14. The default setup is the environment's official drop from z = 5 m. The --place-on-table flag is a separate upright debug setup and is excluded from the reported official-drop trials.
 
+GUI and headless task runs execute without deliberate sleeps by default. Add `--realtime` to pace the physics for watching. The four internal substeps and 200 solver iterations remain unchanged. [PERFORMANCE.md](PERFORMANCE.md) records timing measurements and explains the object 0/11 rejections.
+
 Each batch freezes the Python source once, records its SHA-256 and dependency versions in manifest.json, and executes that snapshot in separate processes. Each trial has JSON metrics and a complete log. A timeout retains its last checkpoint and is reported separately from a completed physical failure. Assets are shared read-only by convention; every environment generates its own temporary maze URDF.
 
 The task seed controls the sampled point cloud and maze entrance/exit randomness. The supplied environment retains its internal maze-generator seed of 5; this evaluation does not claim coverage of arbitrary maze-generation algorithms.
@@ -103,6 +105,8 @@ Measured joint-stop excursions of at most 1 mm/rad in the numerical check are pr
 Transit first tries a checked joint-space edge. Seeded bidirectional RRT-Connect is the fallback. Insertion and lifting use sequential Cartesian IK; a partial path is rejected.
 
 Checks include robot/world geometry, the object, and nonadjacent self-collisions. Assembly adjacency and the supplied SRDF exclusions are handled explicitly. The visual-only goal marker is excluded before collision-shape queries; querying its maximal-coordinate body caused the original crash.
+
+Planning indexes the maze's static boxes individually and uses conservative AABB bounds to skip distant walls. It also culls separated or exempt self-link pairs before asking Bullet for exact distances. The live maze and its collision response are unchanged. Tests compare these queries with the original exhaustive self-collision and merged-maze queries across sampled configurations.
 
 The planner checks intended finger contact separately from unwanted collisions. A carried object may touch the palm within 1 mm of contact slop. This permits an actual settled grasp to start moving; it does not disable live palm collision response or permit penetration into the rest of the arm.
 

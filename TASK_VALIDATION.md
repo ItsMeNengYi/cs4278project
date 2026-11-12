@@ -2,6 +2,8 @@
 
 **9/45 complete tasks succeeded. All-object reliability has not been achieved.**
 
+This report records the earlier frozen policy identified below. Subsequent runtime optimizations and their regression results are recorded separately in [PERFORMANCE.md](PERFORMANCE.md).
+
 The sweep used all 15 supplied objects and task seeds 0, 1 and 3 with the official drop. 32/45 trials verified a physical lift and 60-action hold; 29/45 did so within the lift deadline. There were 36 completed unsuccessful trials and 0 timeouts.
 
 The component checks passed: **46/46** grasping/routing tests and **10/10** navigation-extension tests, with PyBullet installed. These are distinct from the physical full-task trials.

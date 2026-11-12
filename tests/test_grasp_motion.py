@@ -2,6 +2,7 @@
 import unittest
 from pathlib import Path
 import sys
+import tempfile
 
 import numpy as np
 try:
@@ -132,6 +133,60 @@ class MotionTests(unittest.TestCase):
         # Translation of the robot base into the table is deliberately invalid.
         q[m.name_to_action['root_x_axis_joint']] = 2.
         self.assertFalse(m.collision_free(q))
+
+    def test_self_broadphase_matches_exhaustive_bullet_query(self):
+        m = self.planner
+        rng = np.random.default_rng(26)
+        for _ in range(100):
+            q = self.env.agent_qpos.copy()
+            q[m.arm] = rng.uniform(m.lower[m.arm], m.upper[m.arm])
+            m.set_q(q)
+            contacts = p.getClosestPoints(m.robot, m.robot, .002, physicsClientId=m.client)
+            exhaustive = any(c[3] != c[4] and tuple(sorted((c[3], c[4]))) not in m.self_exclusions
+                             for c in contacts)
+            self.assertEqual(m._self_collision(.002), exhaustive)
+
+    def test_maze_broadphase_matches_original_compound_geometry(self):
+        from maze_utils import create_maze_urdf
+        env = _LiveScene()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)/'maze.urdf'
+                create_maze_urdf(np.array([[1,0,1],[0,0,0],[1,0,1]]),
+                                 str(path), grid_z=2., maze_center_x=4.)
+                maze = p.loadURDF(str(path), useFixedBase=True, flags=p.URDF_MERGE_FIXED_LINKS,
+                                  physicsClientId=env.pb_physics_client)
+                env.maze_urdf_path = path
+                with MotionPlanner(env) as m:
+                    self.assertEqual(len(m.maze_boxes), 4)
+                    reference = m._load(path, maze, flags=p.URDF_MERGE_FIXED_LINKS)
+                    rng = np.random.default_rng(6)
+                    hits = 0
+                    for _ in range(100):
+                        q = env.agent_qpos.copy()
+                        q[:2] = rng.uniform([3.,-2.],[8.,2.])
+                        q[m.arm] = rng.uniform(m.lower[m.arm], m.upper[m.arm])
+                        m.set_q(q)
+                        full = p.getClosestPoints(m.robot, reference, .002, physicsClientId=m.client)
+                        candidates = m._world_candidates(m.robot, .002, m.collision_links)
+                        culled = [c for body in candidates if body in m.maze_boxes
+                                  for c in p.getClosestPoints(m.robot, body, .002,
+                                                              physicsClientId=m.client)]
+                        self.assertEqual(bool(full), bool(culled))
+                        hits += bool(full)
+                        if full:
+                            self.assertAlmostEqual(min(c[8] for c in full), min(c[8] for c in culled), places=5)
+                    self.assertGreater(hits, 0)
+                    self.assertLess(hits, 100)
+                    # A held object can extend beyond the base footprint; it needs
+                    # its own wall query, rather than reusing robot candidates.
+                    p.resetBasePositionAndOrientation(m.object, [3.,1.,1.], [0,0,0,1],
+                                                       physicsClientId=m.client)
+                    candidates = m._world_candidates(m.object, 0.)
+                    self.assertTrue(any(body in m.maze_boxes and p.getClosestPoints(
+                        m.object, body, 0., physicsClientId=m.client) for body in candidates))
+        finally:
+            env.close()
 
 
 class PureMotionTests(unittest.TestCase):

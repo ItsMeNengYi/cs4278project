@@ -1,0 +1,57 @@
+[
+  {
+    "mode": "merged",
+    "wall_seconds": 3.7560717260003003,
+    "actions": 200,
+    "still_holding": true,
+    "object_pos": [
+      -0.1251451251766524,
+      0.1503334047318077,
+      0.9425299275436193
+    ]
+  },
+  {
+    "mode": "disabled",
+    "wall_seconds": 3.4131412619999537,
+    "actions": 200,
+    "still_holding": true,
+    "object_pos": [
+      -0.1251451251766524,
+      0.1503334047318077,
+      0.9425299275436193
+    ]
+  },
+  {
+    "mode": "separate",
+    "wall_seconds": 4.156130999000197,
+    "actions": 200,
+    "still_holding": true,
+    "object_pos": [
+      -0.1251451251766524,
+      0.1503334047318077,
+      0.9425299275436193
+    ]
+  },
+  {
+    "mode": "merged",
+    "wall_seconds": 3.8971550290002597,
+    "actions": 200,
+    "still_holding": true,
+    "object_pos": [
+      -0.1251451251766524,
+      0.1503334047318077,
+      0.9425299275436193
+    ]
+  },
+  {
+    "mode": "separate",
+    "wall_seconds": 4.112897182000324,
+    "actions": 200,
+    "still_holding": true,
+    "object_pos": [
+      -0.1251451251766524,
+      0.1503334047318077,
+      0.9425299275436193
+    ]
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "iterations": 200,
+    "residual": 1e-07,
+    "actions": 200,
+    "wall_seconds": 3.30824695299998,
+    "max_drift_m": 0.0007933239666515093,
+    "max_rotation_rad": 0.5330440429236516,
+    "min_loaded_pads": 2
+  },
+  {
+    "iterations": 100,
+    "residual": 1e-07,
+    "actions": 200,
+    "wall_seconds": 2.365996263999932,
+    "max_drift_m": 0.0007932093379330458,
+    "max_rotation_rad": 0.5328238060832922,
+    "min_loaded_pads": 2
+  },
+  {
+    "iterations": 50,
+    "residual": 1e-07,
+    "actions": 200,
+    "wall_seconds": 1.7775648350002484,
+    "max_drift_m": 0.0007906306569021831,
+    "max_rotation_rad": 0.5286012101841264,
+    "min_loaded_pads": 2
+  },
+  {
+    "iterations": 25,
+    "residual": 1e-07,
+    "actions": 200,
+    "wall_seconds": 1.494519520999802,
+    "max_drift_m": 0.0007409455442785611,
+    "max_rotation_rad": 0.5111754791098817,
+    "min_loaded_pads": 2
+  },
+  {
+    "iterations": 200,
+    "residual": 1e-05,
+    "actions": 200,
+    "wall_seconds": 3.2639586290001716,
+    "max_drift_m": 0.0007933239666515093,
+    "max_rotation_rad": 0.5330440429236516,
+    "min_loaded_pads": 2
+  }
+]

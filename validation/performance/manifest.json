@@ -1,0 +1,32 @@
+{
+  "source_hash": "95ff6c118d19ff6e90d761c744ca94b54bfb56b07fb3d1b10251e951d5e1f5b0",
+  "python": "3.10.22 (main, Oct  9 2026, 15:21:30) [Clang 22.1.3 ]",
+  "dependencies": {
+    "numpy": "2.2.6",
+    "scipy": "1.15.3",
+    "pybullet": "3.2.7",
+    "trimesh": "5.2.0",
+    "matplotlib": "3.10.9"
+  },
+  "seeds": [
+    0,
+    1,
+    3
+  ],
+  "timeout_seconds": 600.0,
+  "source_directories": [
+    "/workspace/cs4278project/outputs/speed-regression/seed0",
+    "/workspace/cs4278project/outputs/speed-regression/seed1",
+    "/workspace/cs4278project/outputs/speed-regression/seed3"
+  ],
+  "base_git_commit": "2ff1149c072eb520015fad726a4f6992a486c60c",
+  "description": "Runtime optimizations; all nine previously successful cases and object 0/11 on three seeds.",
+  "component_tests_passed": 48,
+  "physics": {
+    "internal_substeps": 4,
+    "solver_iterations": 200,
+    "fixed_time_step": 0.004166666666666667,
+    "physics_updates_per_action": 5
+  },
+  "task_scope": "Official drop, unchanged maze generator and contact materials"
+}
